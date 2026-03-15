@@ -114,13 +114,17 @@ jobs:
             FULL_IMAGE="$DOCKER_IMAGE:$IMAGE_TAG"
             APP_DIR=""
 
-            if [ -n "${DEPLOY_DIR}" ] && [ -f "${DEPLOY_DIR}/.env" ]; then
+            has_compose_file() {
+              [ -f "$1/docker-compose.yml" ] || [ -f "$1/compose.yml" ] || [ -f "$1/docker-compose.yaml" ] || [ -f "$1/compose.yaml" ]
+            }
+
+            if [ -n "${DEPLOY_DIR}" ] && has_compose_file "${DEPLOY_DIR}"; then
               APP_DIR="${DEPLOY_DIR}"
             fi
 
             if [ -z "$APP_DIR" ]; then
               for candidate in /root/reqflow /reqflow /opt/reqflow /home/$USER/reqflow; do
-                if [ -f "${candidate}/.env" ]; then
+                if has_compose_file "${candidate}"; then
                   APP_DIR="$candidate"
                   break
                 fi
@@ -128,7 +132,7 @@ jobs:
             fi
 
             if [ -z "$APP_DIR" ]; then
-              echo ">>> Could not find .env in known locations."
+              echo ">>> Could not find docker compose file in known locations."
               echo ">>> Set SERVER_APP_DIR secret to your app folder (for example: /root/reqflow)."
               exit 1
             fi
@@ -140,10 +144,15 @@ jobs:
 
             cd "$APP_DIR"
 
-            sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=${IMAGE_TAG}|" .env
+            if [ -f .env ] && grep -q '^IMAGE_TAG=' .env; then
+              sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=${IMAGE_TAG}|" .env
+              echo ">>> Updated IMAGE_TAG in .env"
+            else
+              echo ">>> .env or IMAGE_TAG not found. Using runtime IMAGE_TAG for compose commands."
+            fi
 
             echo ">>> Restarting app container"
-            docker compose up -d --no-deps app
+            IMAGE_TAG="$IMAGE_TAG" docker compose up -d --no-deps app
 
             echo ">>> Waiting for health check (max 90s)..."
             HEALTHY=false
@@ -159,8 +168,10 @@ jobs:
 
             if [ "$HEALTHY" = "false" ]; then
               echo ">>> Rollback..."
-              sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=latest|" .env
-              docker compose up -d --no-deps app
+              if [ -f .env ] && grep -q '^IMAGE_TAG=' .env; then
+                sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=latest|" .env
+              fi
+              IMAGE_TAG="latest" docker compose up -d --no-deps app
               exit 1
             fi
 
