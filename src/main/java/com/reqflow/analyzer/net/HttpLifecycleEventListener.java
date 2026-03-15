@@ -5,9 +5,11 @@ import java.net.Proxy;
 import java.util.List;
 
 import okhttp3.Call;
+import okhttp3.Connection;
 import okhttp3.EventListener;
 import okhttp3.Handshake;
 import okhttp3.Protocol;
+import okhttp3.Route;
 
 public class HttpLifecycleEventListener extends EventListener {
 
@@ -53,6 +55,20 @@ public class HttpLifecycleEventListener extends EventListener {
         if (inetSocketAddress != null && inetSocketAddress.getAddress() != null) {
             timingContext.setServerIp(inetSocketAddress.getAddress().getHostAddress());
         }
+    }
+
+    @Override
+    public void connectionAcquired(Call call, Connection connection) {
+        if (connection == null) {
+            return;
+        }
+
+        Route route = connection.route();
+        if (route == null || route.socketAddress() == null || route.socketAddress().getAddress() == null) {
+            return;
+        }
+
+        timingContext.setServerIp(route.socketAddress().getAddress().getHostAddress());
     }
 
     @Override

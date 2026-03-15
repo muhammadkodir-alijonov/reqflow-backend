@@ -118,7 +118,11 @@ public class RequestTimingContext {
     }
 
     public long getHttpResponseMs() {
-        return durationMillis(responseStartNanos, responseEndNanos);
+        long start = responseStartNanos;
+        if (requestEndNanos >= 0L) {
+            start = requestEndNanos;
+        }
+        return durationMillis(start, responseEndNanos);
     }
 
     public long getTotalTimeMs() {
