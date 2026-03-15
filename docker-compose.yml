@@ -1,0 +1,7 @@
+services:
+  app:
+    image: ${DOCKER_IMAGE}:${IMAGE_TAG:-latest}
+    container_name: reqflow-app
+    restart: unless-stopped
+    ports:
+      - "6060:6060"
