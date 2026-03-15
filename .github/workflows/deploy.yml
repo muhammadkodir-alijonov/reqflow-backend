@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: reqflow
     env:
-      DOCKER_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/reqflow
+      DOCKER_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/reqflow-backend
 
     steps:
       - name: Checkout
@@ -117,6 +117,17 @@ jobs:
               [ -f "$1/docker-compose.yml" ] || [ -f "$1/compose.yml" ] || [ -f "$1/docker-compose.yaml" ] || [ -f "$1/compose.yaml" ]
             }
 
+            compose_up() {
+              if docker compose version >/dev/null 2>&1; then
+                DOCKER_IMAGE="$DOCKER_IMAGE" IMAGE_TAG="$1" docker compose up -d --no-deps app
+              elif command -v docker-compose >/dev/null 2>&1; then
+                DOCKER_IMAGE="$DOCKER_IMAGE" IMAGE_TAG="$1" docker-compose up -d --no-deps app
+              else
+                echo ">>> Neither 'docker compose' nor 'docker-compose' is installed on the server."
+                exit 1
+              fi
+            }
+
             if ! has_compose_file "$APP_DIR"; then
               echo ">>> Docker compose file not found in $APP_DIR"
               echo ">>> Searching common directories for compose file..."
@@ -148,7 +159,7 @@ jobs:
             fi
 
             echo ">>> Restarting app container"
-            IMAGE_TAG="$IMAGE_TAG" docker compose up -d --no-deps app
+            compose_up "$IMAGE_TAG"
 
             echo ">>> Waiting for health check (max 90s)..."
             HEALTHY=false
@@ -167,7 +178,7 @@ jobs:
               if [ -f .env ] && grep -q '^IMAGE_TAG=' .env; then
                 sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=latest|" .env
               fi
-              IMAGE_TAG="latest" docker compose up -d --no-deps app
+              compose_up latest
               exit 1
             fi
 
