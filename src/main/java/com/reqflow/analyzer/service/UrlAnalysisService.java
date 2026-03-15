@@ -55,22 +55,22 @@ public class UrlAnalysisService {
             drainResponseBody(response.body());
         }
 
-        TimingBreakdownDto timingBreakdown = new TimingBreakdownDto(
-                timingContext.getDnsLookupMs(),
-                timingContext.getTcpHandshakeMs(),
-                timingContext.getTlsHandshakeMs(),
-                timingContext.getHttpRequestMs(),
-                timingContext.getHttpResponseMs()
-        );
+        TimingBreakdownDto timingBreakdown = TimingBreakdownDto.builder()
+            .dnsLookupMs(timingContext.getDnsLookupMs())
+            .tcpHandshakeMs(timingContext.getTcpHandshakeMs())
+            .tlsHandshakeMs(timingContext.getTlsHandshakeMs())
+            .httpRequestMs(timingContext.getHttpRequestMs())
+            .httpResponseMs(timingContext.getHttpResponseMs())
+            .build();
 
-        return new UrlAnalysisResponseDto(
-                url,
-                timingContext.getServerIp(),
-                timingContext.getStatusCode(),
-                timingContext.getProtocol(),
-                timingContext.getTotalTimeMs(),
-                timingBreakdown
-        );
+        return UrlAnalysisResponseDto.builder()
+            .url(url)
+            .serverIp(timingContext.getServerIp())
+            .statusCode(timingContext.getStatusCode())
+            .protocol(timingContext.getProtocol())
+            .totalTimeMs(timingContext.getTotalTimeMs())
+            .timings(timingBreakdown)
+            .build();
     }
 
     private void drainResponseBody(ResponseBody body) throws IOException {
