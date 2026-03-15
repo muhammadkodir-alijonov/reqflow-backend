@@ -84,7 +84,7 @@ jobs:
             exit 1
           fi
 
-          if ! printf '%s' "$SERVER_SSH_KEY" | grep -Eq '-----BEGIN (OPENSSH|RSA|EC|DSA) PRIVATE KEY-----'; then
+          if ! printf '%s' "$SERVER_SSH_KEY" | grep -Eq -- '-----BEGIN (OPENSSH|RSA|EC|DSA) PRIVATE KEY-----'; then
             echo "::error::SERVER_SSH_KEY is not a valid private key format. Paste the full private key including BEGIN/END lines."
             exit 1
           fi
