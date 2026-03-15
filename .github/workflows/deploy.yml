@@ -111,7 +111,7 @@ jobs:
 
             IMAGE_TAG="sha-$(echo $GITHUB_SHA | cut -c1-7)"
             FULL_IMAGE="$DOCKER_IMAGE:$IMAGE_TAG"
-            APP_DIR=/reqflow
+            APP_DIR=/root/reqflow
 
             echo ">>> Pulling new image: $FULL_IMAGE"
             docker pull "$FULL_IMAGE"
