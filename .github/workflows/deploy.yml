@@ -119,8 +119,18 @@ jobs:
 
             if ! has_compose_file "$APP_DIR"; then
               echo ">>> Docker compose file not found in $APP_DIR"
-              echo ">>> Update APP_DIR in deploy workflow to the correct server path."
-              exit 1
+              echo ">>> Searching common directories for compose file..."
+
+              FOUND_COMPOSE_FILE=$( (find /root /home /opt /srv -maxdepth 5 -type f \( -name 'docker-compose.yml' -o -name 'compose.yml' -o -name 'docker-compose.yaml' -o -name 'compose.yaml' \) 2>/dev/null || true) | head -n 1 )
+
+              if [ -n "$FOUND_COMPOSE_FILE" ]; then
+                APP_DIR=$(dirname "$FOUND_COMPOSE_FILE")
+                echo ">>> Auto-detected APP_DIR: $APP_DIR"
+              else
+                echo ">>> Could not auto-detect compose file."
+                echo ">>> Set APP_DIR in deploy workflow to your actual server path."
+                exit 1
+              fi
             fi
 
             echo ">>> Using APP_DIR: $APP_DIR"
