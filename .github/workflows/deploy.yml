@@ -98,42 +98,28 @@ jobs:
         env:
           DOCKER_IMAGE: ${{ env.DOCKER_IMAGE }}
           GITHUB_SHA: ${{ github.sha }}
-          DEPLOY_DIR: ${{ secrets.SERVER_APP_DIR }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           passphrase: ${{ secrets.SERVER_SSH_PASSPHRASE }}
           port: ${{ secrets.SERVER_PORT || 22 }}
-          envs: DOCKER_IMAGE,GITHUB_SHA,DEPLOY_DIR
+          envs: DOCKER_IMAGE,GITHUB_SHA
           command_timeout: 5m
           script: |
             set -e
 
             IMAGE_TAG="sha-$(echo $GITHUB_SHA | cut -c1-7)"
             FULL_IMAGE="$DOCKER_IMAGE:$IMAGE_TAG"
-            APP_DIR=""
+            APP_DIR="/root/reqflow"
 
             has_compose_file() {
               [ -f "$1/docker-compose.yml" ] || [ -f "$1/compose.yml" ] || [ -f "$1/docker-compose.yaml" ] || [ -f "$1/compose.yaml" ]
             }
 
-            if [ -n "${DEPLOY_DIR}" ] && has_compose_file "${DEPLOY_DIR}"; then
-              APP_DIR="${DEPLOY_DIR}"
-            fi
-
-            if [ -z "$APP_DIR" ]; then
-              for candidate in /root/reqflow /reqflow /opt/reqflow /home/$USER/reqflow; do
-                if has_compose_file "${candidate}"; then
-                  APP_DIR="$candidate"
-                  break
-                fi
-              done
-            fi
-
-            if [ -z "$APP_DIR" ]; then
-              echo ">>> Could not find docker compose file in known locations."
-              echo ">>> Set SERVER_APP_DIR secret to your app folder (for example: /root/reqflow)."
+            if ! has_compose_file "$APP_DIR"; then
+              echo ">>> Docker compose file not found in $APP_DIR"
+              echo ">>> Update APP_DIR in deploy workflow to the correct server path."
               exit 1
             fi
 
