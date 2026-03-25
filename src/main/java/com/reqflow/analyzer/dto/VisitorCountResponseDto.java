@@ -10,6 +10,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class VisitorCountResponseDto {
-    private int activeVisitors;
+    private long totalVisits;
     private long timestamp;
 }
