@@ -5,9 +5,9 @@ import com.reqflow.analyzer.service.VisitorPresenceService;
 
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 
 @Path("/api/visitors")
@@ -17,34 +17,35 @@ public class VisitorController {
     @Inject
     VisitorPresenceService visitorPresenceService;
 
+    @POST
+    @Path("/hit")
+    public VisitorCountResponseDto hit() {
+        long totalVisits = visitorPresenceService.registerVisit();
+        return buildResponse(totalVisits);
+    }
+
+    @GET
+    @Path("/total")
+    public VisitorCountResponseDto total() {
+        return buildResponse(visitorPresenceService.currentTotal());
+    }
+
     @GET
     @Path("/ping")
-    public VisitorCountResponseDto ping(@QueryParam("clientId") String clientId) {
-        validateClientId(clientId);
-        int activeVisitors = visitorPresenceService.touch(clientId);
-        return VisitorCountResponseDto.builder()
-                .activeVisitors(activeVisitors)
-                .timestamp(System.currentTimeMillis())
-                .build();
+    public VisitorCountResponseDto ping() {
+        return total();
     }
 
     @GET
     @Path("/current")
     public VisitorCountResponseDto current() {
-        int activeVisitors = visitorPresenceService.currentCount();
-        return VisitorCountResponseDto.builder()
-                .activeVisitors(activeVisitors)
-                .timestamp(System.currentTimeMillis())
-                .build();
+        return total();
     }
 
-    private void validateClientId(String clientId) {
-        if (clientId == null || clientId.isBlank()) {
-            throw new IllegalArgumentException("Query parameter 'clientId' is required.");
-        }
-
-        if (clientId.length() > 128) {
-            throw new IllegalArgumentException("Query parameter 'clientId' exceeds max length.");
-        }
+    private VisitorCountResponseDto buildResponse(long totalVisits) {
+        return VisitorCountResponseDto.builder()
+                .totalVisits(totalVisits)
+                .timestamp(System.currentTimeMillis())
+                .build();
     }
 }
