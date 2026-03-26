@@ -2,6 +2,7 @@ package com.reqflow.analyzer.service;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 import com.reqflow.analyzer.dto.TimingBreakdownDto;
 import com.reqflow.analyzer.dto.UrlAnalysisResponseDto;
@@ -9,6 +10,7 @@ import com.reqflow.analyzer.net.HttpLifecycleEventListener;
 import com.reqflow.analyzer.net.RequestTimingContext;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import okhttp3.ConnectionPool;
 import okhttp3.OkHttpClient;
 import okhttp3.Protocol;
 import okhttp3.Request;
@@ -21,6 +23,7 @@ import okio.BufferedSource;
 public class UrlAnalysisService {
 
     private final OkHttpClient client;
+    private final OkHttpClient coldClient;
 
     public UrlAnalysisService() {
         this.client = new OkHttpClient.Builder()
@@ -36,18 +39,37 @@ public class UrlAnalysisService {
                     return new HttpLifecycleEventListener(timingContext);
                 })
                 .build();
+
+        // Short-lived pool + keepAlive=0 significantly reduces connection reuse for cold measurements.
+        this.coldClient = this.client.newBuilder()
+                .connectionPool(new ConnectionPool(0, 1, TimeUnit.NANOSECONDS))
+                .retryOnConnectionFailure(false)
+                .build();
     }
 
     public UrlAnalysisResponseDto analyze(String url) throws IOException {
+        return analyze(url, false);
+    }
+
+    public UrlAnalysisResponseDto analyze(String url, boolean cold) throws IOException {
         RequestTimingContext timingContext = new RequestTimingContext();
 
-        Request request = new Request.Builder()
+        Request.Builder requestBuilder = new Request.Builder()
                 .url(url)
                 .get()
-                .tag(RequestTimingContext.class, timingContext)
-                .build();
+                .tag(RequestTimingContext.class, timingContext);
 
-        try (Response response = client.newCall(request).execute()) {
+        if (cold) {
+            requestBuilder
+                    .header("Cache-Control", "no-cache, no-store, max-age=0")
+                    .header("Pragma", "no-cache")
+                    .header("Connection", "close");
+        }
+
+        Request request = requestBuilder.build();
+        OkHttpClient selectedClient = cold ? coldClient : client;
+
+        try (Response response = selectedClient.newCall(request).execute()) {
             timingContext.setStatusCode(response.code());
             timingContext.setProtocol(toDisplayProtocol(response.protocol()));
 

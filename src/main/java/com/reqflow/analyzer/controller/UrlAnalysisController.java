@@ -25,9 +25,11 @@ public class UrlAnalysisController {
     UrlAnalysisService analysisService;
 
     @GET
-    public UrlAnalysisResponseDto analyze(@QueryParam("url") String url) throws IOException {
+    public UrlAnalysisResponseDto analyze(
+            @QueryParam("url") String url,
+            @QueryParam("cold") Boolean cold) throws IOException {
         validateUrl(url);
-        return analysisService.analyze(url);
+        return analysisService.analyze(url, Boolean.TRUE.equals(cold));
     }
 
     private void validateUrl(String url) {
