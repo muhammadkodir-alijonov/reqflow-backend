@@ -111,7 +111,7 @@ jobs:
 
             IMAGE_TAG="sha-$(echo $GITHUB_SHA | cut -c1-7)"
             FULL_IMAGE="$DOCKER_IMAGE:$IMAGE_TAG"
-            APP_DIR="/root/reqflow"
+            APP_DIR="/root/reqflow-backend"
 
             has_compose_file() {
               [ -f "$1/docker-compose.yml" ] || [ -f "$1/compose.yml" ] || [ -f "$1/docker-compose.yaml" ] || [ -f "$1/compose.yaml" ]
